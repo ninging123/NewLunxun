@@ -15,7 +15,7 @@ class IndexController extends BaseController {
             exec($shell,$out);
             foreach ($out as $v){
                 if (strstr($v,'error')){
-                    $shell_pro = "git stash && git pull && git stash pop";
+                    $shell_pro = "git stash && git pull && git stash pop 2>&1";
                     exec($shell_pro,$our_pro);
                     echo '<pre>';
                     print_r($out);
