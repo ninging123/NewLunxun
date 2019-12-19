@@ -37,7 +37,7 @@ class IndexController extends BaseController {
                 [11] => "Aborting ",
                 [12] => "Updating 03bed86..90fbcbc"
             );
-            foreach ($out as $v){
+            foreach ($out as $k=>$v){
                 if (strstr($v,'error')){
                     $shell_pro = "git stash && git pull && git stash pop";
                     exec($shell_pro,$our_pro);
