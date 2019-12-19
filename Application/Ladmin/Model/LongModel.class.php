@@ -24,15 +24,16 @@ class LongModel extends Model{
     public function checkRemember(){
         $arr = array();
         $now = time();
-        list($identifier,$token) = explode(":",$_COOKIE['auth']);
-        if (ctype_alpha($identifier) &&  ctype_alnum($token)){
+        list($identifier,$token) = explode(":",$_COOKIE['admin_auth']);
+        if (ctype_alnum($identifier) &&  ctype_alnum($token)){
             $arr['identifier'] = $identifier;
             $arr['token'] = $token;
         }else{
             return False;
         }
-        $admin = M('admin');
-        $info = $admin->where(['identifier' => $arr['identifier']])->getField('identifier');
+        //->field('token','identifier','timeout')
+        $info = M('admin')->where(['identifier' => $arr['identifier']])->getField('id,username,identifier,token,timeout');
+        foreach ($info as $v){$info = $v;}
         if($info != null){
             if($arr['token'] != $info['token']){
                 return false;

@@ -5,10 +5,12 @@ return array(
     'COOKIE_EXPIRE' => 3600,
     'COOKIE_SECURE' => false,
     'COOKIE_HTTPONLY' => true,
-    'LOAD_EXT_CONFIG' => 'database,mail',
+    'LOAD_EXT_CONFIG' => 'database,mail',//
+//    'URL_MODULE_MAP' => array('choudd'=>'Ladmin'), //设置模块映射 '模块映射名'=>'实际模块名'   不建议使用
+    'MODULE_ALLOW_LIST' => array('Home','Ladmin'),//允许访问的模块
+    'MODULE_DENY_LIST'=>  array('Common','Runtime'),    //禁止访问的模块
     /* 全局过滤配置 */
     'DEFAULT_FILTER' =>  'strip_tags,htmlspecialchars',
-    'MODULE_DENY_LIST'=>  array('Common','Runtime'),    //禁止访问的模块
     /* URL配置 */
     'URL_CASE_INSENSITIVE' => True, //默认false 表示URL区分大小写 true则表示不区分大小写
     'URL_MODEL'            => 2, //URL模式

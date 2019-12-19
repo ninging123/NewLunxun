@@ -65,15 +65,6 @@ function mailSend($title, $toMail, $product, $config){
  */
 function checkSend($mobile,$max_smsNum){
     $fileName = "ErrorNum/checkMobileNum_".date("Ymd").".txt";
-    $allMobile = M('admin')->where('bindMobile','neq','null|""')->select();
-    $i = 0; $arr = array();
-    foreach ($allMobile as $v){
-        $arr[$i++] = $v[bindmobile];
-    }
-    if (!in_array($mobile,$arr)){
-        M('sms_source')->add(['mobile' => $mobile, 'createtime' => time()]);
-        return False;
-    }
     if(file_exists($fileName)){//文件存在获取次数并将此次请求的数据写入
         $arr=file_get_contents($fileName);
         $row=explode("|",$arr);
@@ -90,6 +81,20 @@ function checkSend($mobile,$max_smsNum){
         file_put_contents($fileName,$mobile."|");
         return False;
     }
+}
+
+/**
+ * 验证短信验证码是否正确
+ * $code
+ */
+function checkCode($code){
+    $sms_isTrue = True;
+    $sms_code = session('sms');
+    if ($sms_code['smsCode'] == $code && time() - $sms_code['sms_time'] < 300 && $sms_code['sms_sign'] == substr(md5(C('DATA_AUTH_KEY').$code),0,5)){
+        $sms_isTrue = False;
+//        session('sms',null);
+    }
+    return $sms_isTrue;
 }
 
 /**
@@ -280,8 +285,7 @@ function data_auth_sign($data) {
         $data = (array)$data;
     }
     ksort($data); //排序
-    $code = http_build_query($data); //url编码并生成query字符串
-    $sign = sha1($code); //生成签名
+    $sign = sha1(http_build_query($data)); //url编码并生成query字符串并生成签名
     return $sign;
 }
 

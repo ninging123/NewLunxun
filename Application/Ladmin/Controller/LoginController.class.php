@@ -11,8 +11,8 @@ class LoginController extends Controller {
     public function index(){
         $this->checkLong();
         //已经登录则跳转后台
-        if(isset($_SESSION['username'])){
-            $this->redirect('后台地址');
+        if(isset($_SESSION['admin_auth'])){
+            $this->redirect('Index/index');
         }else{
             //判断是否存在cookie
             if(isset($_COOKIE['username'])){
@@ -26,17 +26,15 @@ class LoginController extends Controller {
      * 登陆处理
      */
     public function loginAction(){
-        if (IS_GET){
+        if (IS_POST){
             $username = I('post.username','','trim');
-            $username = I('username','','trim');
             $password = I('post.password','','trim');
-            $password = I('password','','trim');
             if (empty($username) || empty($password)) {
                 $this->ajaxReturn(['status' => 0, 'msg' => '账号和密码不能为空！']);
             }
             if (is_sms_open()){
                 $code  = I("post.code", '', 'trim');
-                if ($code){
+                if (checkCode($code)){
                     $this->ajaxReturn(['status' => 0, 'msg' => '短信验证码错误']);
                 }
             }
@@ -63,7 +61,7 @@ class LoginController extends Controller {
                 );
 //                M('admin_log')->add($admin_log);
                 //如果用户勾选了"记住我",则保持持久登陆
-                if (I('remember','','trim')){
+                if (I('post.remember','','trim')){
                     $salt = random_str(16);
                     //第二分身标识
                     $identifier = md5(C('DATA_AUTH_KEY') . md5($username . $salt));
@@ -79,15 +77,16 @@ class LoginController extends Controller {
                     setcookie('username',$username,time()+3600*24);
                 }
                 //用户信息存入session
-                $admim = [
+                $admim = array(
                     'name' => $username,
                     'uid'  => $info['id'],
-                    'session_random' => $identifier,
-                ];
+                    'session_random' => md5(C('DATA_AUTH_KEY') . md5($username)),
+                );
+                M('admin')->where(['username' => $username])->setField('session_random');
                 session_regenerate_id(true);
                 session('admin_auth', $admim);
-                ksort($admin_indo); //排序
-                $sign = sha1(http_build_query($admin_indo));  //url编码并生成query字符串  并加密
+                ksort($admim); //排序
+                $sign = sha1(http_build_query($admim));  //url编码并生成query字符串  并加密
                 session('admin_auth_sign', $sign);
                 //常用地址
                 $localCountry = [];
@@ -119,7 +118,8 @@ class LoginController extends Controller {
                     $html = str_replace(['time','address'],[date('Y-m-d H:i:s'),$city],C('loginWarning'));
                     mailSend('异地登陆提醒', $info['bindmail'], $html, $mailConfig);
                 }
-                $this->ajaxReturn(['status' => 200, 'msg' => '登录成功!', 'url' => U('Index/index')]);
+//                $this->ajaxReturn(['status' => 200, 'msg' => '登录成功!', 'url' => U('Index/index')]);
+                $this->redirect('Index/index');
             }else{
                 $this->ajaxReturn(['status' => 0, 'msg' => '账号或密码错误']);
             }
@@ -135,8 +135,17 @@ class LoginController extends Controller {
         if($is_long === false){
 
         }else{
-            session("username",$is_long['uname']);
-            session("id",$is_long['uid']);
+            $admim = array(
+                'name' => $is_long['username'],
+                'uid'  => $is_long['id'],
+                'session_random' => md5(C('DATA_AUTH_KEY') . md5($is_long['username'])),
+            );
+            M('admin')->where(['username' => $username])->setField('session_random');
+            session_regenerate_id(true);
+            session('admin_auth', $admim);
+            ksort($admim); //排序
+            $sign = sha1(http_build_query($admim));  //url编码并生成query字符串  并加密
+            session('admin_auth_sign', $sign);
         }
     }
 
@@ -145,7 +154,7 @@ class LoginController extends Controller {
      */
     public function loginout(){
         session(null);
-        setcookie('auth', '', time()-1);
+        setcookie('admin_auth', '', time()-1);
         $this->redirect("Login/index");
     }
 
@@ -154,16 +163,21 @@ class LoginController extends Controller {
      */
     public function smSend(){
         if (IS_POST){
-            if (!preg_match("/^1[34578]{1}\d{9}$/", I('post.mobile','','trim'))) {
+            $mobile = M('admin')->where(['username' => $_REQUEST['username']])->getField('bindmobile');
+            if (!preg_match("/^1[34578]{1}\d{9}$/", $mobile)) {
                 $this->ajaxReturn(['status'=> False,'msg' => '手机号有误']);
             }
             $maxSmsNum = M('config')->where(['id' => 1])->getField('max_error_num');
-            $smsNum = checkSend($_POST['mobile'],$maxSmsNum);
+            $smsNum = checkSend($mobile,$maxSmsNum);
             if ($smsNum != 999 && $smsNum < $maxSmsNum){
                 $smsTemplate = M("sms_template")->field("template_code")->where(array("call_index" => 'loginSend'))->find();
                 $rand = mt_rand(1000,9999);
-                session('sms_code',$rand);
-                session('sms_code_time',time());
+                $session_code = array(
+                    'smsCode' => $rand,
+                    'sms_time' => time(),
+                    'sms_sign' => substr(md5(C('DATA_AUTH_KEY').$rand),0,5)
+                );
+                session('sms',$session_code);
                 $res = sendSMS($_POST['mobile'],$smsTemplate["template_code"],array('code' => $rand));
             }
             $this->ajaxReturn(['status'=> (int)($res) == '' ? 0 : $rand ,'msg' => (int)($res) == '' ? '发送失败,请明天重试' : '发送成功']);

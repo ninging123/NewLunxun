@@ -5,6 +5,29 @@
     <title>Title</title>
 </head>
 <body>
-1111
+<form action="<{:U('Login/loginAction')}>" method="post" enctype="multipart/form-data">
+    <input type="text" placeholder="用户名" name="username" value="<{$username}>">
+    <input type="text" placeholder="密码" name="password">
+    <input type="text" placeholder="验证码" name="code">
+    <input type="button" onclick="btn()" value="点击获取验证码"><br>
+    7天内免登录<input type="radio" value="1" checked name="remember">
+    <input type="submit">
+</form>
 </body>
+<script>
+    function btn(){
+        username = document.getElementsByName('username')[0].value;
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST","<{:U('Login/smSend')}>");
+        xhr.send('username='+username+'&remember=1');
+        xhr.onreadystatechange=function()
+        {
+            if (xhr.status == 200){
+                console.log(username)
+            }else{
+                alert('发送失败')
+            }
+        }
+    }
+</script>
 </html>
